@@ -1,20 +1,7 @@
-﻿/*
-?CreateModifiedExecutable@LLPE@@YA_NXZ
-?CreateSymbolList@LLPE@@YA_NXZ
-?GenerateDefinitionFiles@LLPE@@YA_NXZ
-?GetEditorFilename@LLPE@@YAPEADH@Z
-?GetFilteredFunctionListCount@LLPE@@YAHXZ
-?ProcessFunctionList@LLPE@@YA_NXZ
-?ProcessLibDirectory@LLPE@@YA_NPEBD@Z
-?ProcessLibFile@LLPE@@YA_NPEBD@Z
-?ProcessPlugins@LLPE@@YA_NXZ
-?SetEditorFilename@LLPE@@YAXHPEBDH@Z
-*/
-using System.ComponentModel;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 public static class PeLibraryTests {
-	enum LLFileTypes {
+	public enum LLFileTypes {
 		VanillaExe,
 		LiteModExe,
 		BedrockPdb,
@@ -23,53 +10,62 @@ public static class PeLibraryTests {
 		SymbolList
 	}
 
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?CreateModifiedExecutable@LLPE@@YA_NXZ")]
-    public static extern bool CreateModifiedExecutable();
+	public static List<KeyValuePair<LLFileTypes, string>> filenameDefaultsLookup = new List<KeyValuePair<LLFileTypes, string>> {
+		new KeyValuePair<LLFileTypes, string> ((LLFileTypes)LLFileTypes.VanillaExe, "bedrock_server.exe"),
+		new KeyValuePair<LLFileTypes, string> ((LLFileTypes)LLFileTypes.LiteModExe, "bedrock_server_mod.exe"),
+		new KeyValuePair<LLFileTypes, string> ((LLFileTypes)LLFileTypes.BedrockPdb, "bedrock_server.pdb"),
+		new KeyValuePair<LLFileTypes, string> ((LLFileTypes)LLFileTypes.ApiDef, "bedrock_server_api.def"),
+		new KeyValuePair<LLFileTypes, string> ((LLFileTypes)LLFileTypes.VarDef, "bedrock_server_var.def"),
+		new KeyValuePair<LLFileTypes, string> ((LLFileTypes)LLFileTypes.SymbolList, "bedrock_server_symbols.txt")
+	};
 
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?CreateSymbolList@LLPE@@YA_NXZ")]
-	public static extern bool CreateSymbolList();
+	public static string GetFilenameLookup(LLFileTypes type) {
+		return filenameDefaultsLookup.First(x => x.Key == type).Value;
+    }
 
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?GenerateDefinitionFiles@LLPE@@YA_NXZ")]
-	public static extern bool GenerateDefinitionFiles();
-	
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?GetEditorFilename@LLPE@@YAPEBDH@Z")]
-	public static extern string GetEditorFilename(int LLFileType);
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessFunctionList@LLPE@@YA_NPEBD@Z")]
+	public static extern bool ProcessFunctionList(string pdbFile);
 
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?GetFilteredFunctionListCount@LLPE@@YAHXZ")]
-	public static extern int GetFilteredFunctionListCount();
-	
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessFunctionList@LLPE@@YA_NXZ")]
-	public static extern bool ProcessFunctionList();
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?CreateSymbolList@LLPE@@YA_NPEBD0@Z")]
+	public static extern bool CreateSymbolList(string symFileName, string pdbFile);
 
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessLibDirectory@LLPE@@YA_NPEBD@Z")]
-	public static extern bool ProcessLibDirectory(string dirName);
-	
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessLibFile@LLPE@@YA_NPEBD@Z")]
-	public static extern bool ProcessLibFile(string filename);
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessLibFile@LLPE@@YA_NPEBD0@Z")]
+	public static extern bool ProcessLibFile(string libName, string modExeName);
 
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessPlugins@LLPE@@YA_NXZ")]
-	public extern static bool ProcessPlugins();
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessLibDirectory@LLPE@@YA_NPEBD0@Z")]
+	public static extern bool ProcessLibDirectory(string directoryName, string modExeName);
 
-	[DllImport("LLPeProviderService.dll", EntryPoint = "?SetEditorFilename@LLPE@@YAXHPEBD@Z")]
-	public extern static void SetEditorFilename(int fileTpe, string filename);
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?ProcessPlugins@LLPE@@YA_NPEBD@Z")]
+	public static extern bool ProcessPlugins(string modExeName);
+
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?GenerateDefinitionFiles@LLPE@@YA_NPEBD00@Z")]
+	public static extern bool GenerateDefinitionFiles(string pdbName, string apiName, string varName);
+
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?CreateModifiedExecutable@LLPE@@YA_NPEBD00@Z")]
+	public static extern bool CreateModifiedExecutable(string bedrockName, string liteModName, string pdbName);
+
+	[DllImport("LLPeProviderService.dll", EntryPoint = "?GetFilteredFunctionListCount@LLPE@@YAHPEBD@Z")]
+	public static extern int GetFilteredFunctionListCount(string pdbName);
 
 	public static void RunTest() {
 		Console.WriteLine("LL PE Library tests begin.");
 		string filename = "Test.exe";
-		SetEditorFilename((int)LLFileTypes.LiteModExe, filename);
-		if (ProcessFunctionList()) {
-			Console.WriteLine($"List returned a count of {GetFilteredFunctionListCount()} filtered symbols.");
+
+		if (ProcessFunctionList(GetFilenameLookup(LLFileTypes.BedrockPdb))) {
+			Console.WriteLine($"List returned a count of {GetFilteredFunctionListCount(GetFilenameLookup(LLFileTypes.VanillaExe))} filtered symbols.");
 		}
-		Console.WriteLine($"Filename from lib returned: {GetEditorFilename((int)LLFileTypes.LiteModExe)}");
-		Console.WriteLine(GetEditorFilename((int)LLFileTypes.VanillaExe));
-		Console.WriteLine(GetEditorFilename((int)LLFileTypes.BedrockPdb));
-		Console.WriteLine(GetEditorFilename((int)LLFileTypes.ApiDef));
-		Console.WriteLine(GetEditorFilename((int)LLFileTypes.VarDef));
-		Console.WriteLine(GetEditorFilename((int)LLFileTypes.SymbolList));
-		GenerateDefinitionFiles();
-		CreateSymbolList();
-		CreateModifiedExecutable();
-		ProcessPlugins();
+
+		CreateSymbolList("symTest.def",	GetFilenameLookup(LLFileTypes.BedrockPdb));
+
+		GenerateDefinitionFiles(GetFilenameLookup(LLFileTypes.BedrockPdb), "apiTest.def", "varTest.def");
+
+		GenerateDefinitionFiles(GetFilenameLookup(LLFileTypes.BedrockPdb), GetFilenameLookup(LLFileTypes.ApiDef), GetFilenameLookup(LLFileTypes.VarDef));
+
+		ProcessPlugins(filename);
+
+		CreateModifiedExecutable(GetFilenameLookup(LLFileTypes.VanillaExe), filename, GetFilenameLookup(LLFileTypes.BedrockPdb));
+
+		CreateSymbolList(GetFilenameLookup(LLFileTypes.SymbolList), GetFilenameLookup(LLFileTypes.BedrockPdb));
     }
 
 	public static void Main(string[] args) {
